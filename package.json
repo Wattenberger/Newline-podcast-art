@@ -1,0 +1,13 @@
+{
+  "name": "newline-podcast-art",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Amelia <wattenberger@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "canvas-sketch": "^0.7.3",
+    "canvas-sketch-util": "^1.10.0",
+    "dat.gui": "^0.7.6",
+    "lodash": "^4.17.15"
+  }
+}
