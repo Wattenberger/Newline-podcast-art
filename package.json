@@ -4,6 +4,9 @@
   "main": "index.js",
   "author": "Amelia <wattenberger@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "start": "canvas-sketch version-1.js --hot --output=outputs"
+  },
   "dependencies": {
     "canvas-sketch": "^0.7.3",
     "canvas-sketch-util": "^1.10.0",

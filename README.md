@@ -5,6 +5,11 @@ This uses Matt DesLauriers' wonderful [`canvas-sketch`](https://github.com/mattd
 ## To run
 
 ```
+yarn install
+yarn run start
+```
+or
+```
 canvas-sketch version-1.js --hot --output=outputs
 ```
 
