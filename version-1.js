@@ -2,8 +2,12 @@ const canvasSketch = require('canvas-sketch');
 const _ = require('lodash');
 const random = require('canvas-sketch-util/random');
 // const Color = require('canvas-sketch-util/color');
+import { color } from "d3-color"
 const { GUI } = require("dat.gui")
 
+var modes = ['normal', 'destination-over', 'lighter', 'multiply', 'screen', 'overlay', 'darken',
+             'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light',
+             'exclusion', 'hue', 'saturation', 'color', 'luminosity' ];
 const data = {
   color1: getLocalStorage("color1") || "#f7a972",
   color2: getLocalStorage("color2") || "#b190fc",
@@ -11,8 +15,13 @@ const data = {
   color4: getLocalStorage("color4") || "#93dfff",
   color5: getLocalStorage("color5") || "#ffffff",
   color6: getLocalStorage("color6") || "#454545",
+  textColor: getLocalStorage("textColor") || "#fff",
+  circleColor: getLocalStorage("circleColor") || "#fff",
   guest: getLocalStorage("guest") || "",
+  filter: getLocalStorage("filter") || "",
+  mode: getLocalStorage("mode") || modes[0],
   guestFontSize: getLocalStorage("guestFontSize") || 0.56,
+  imageName: getLocalStorage("imageName") || "",
   numColors: +getLocalStorage("numColors") || 4,
   darkness: +getLocalStorage("darkness") || 50,
   seed: +getLocalStorage("seed") || 0,
@@ -21,6 +30,7 @@ const settings = {
   dimensions: [ 2048, 2048 ],
   data,
 };
+
 
 const colors = [
   "#DE86B0", "#466DCA",
@@ -31,7 +41,7 @@ const colors = [
 ]
 
 const sketch = () => {
-  return ({ context, width, height, data }) => {
+  return async ({ context, width, height, data }) => {
     context.fillStyle = 'white';
     context.fillRect(0, 0, width, height);
     context.globalAlpha = 1
@@ -63,17 +73,97 @@ const sketch = () => {
       gradient.addColorStop(1, `${color}00`);
       context.fillStyle = gradient;
 
-      context.beginPath();
-      context.ellipse(x, y, r, r, Math.PI / 4, 0, 2 * Math.PI);
+      context.beginPath()
+      context.ellipse(x, y, r, r, Math.PI / 4, 0, 2 * Math.PI)
       context.fill()
       context.fill()
       context.fill()
-
     })
 
+    const savedImage = context.getImageData(0, 0, width, height)
+    context.translate(width, 0);
+    context.scale(-1, 1)
+    const flippedImage = context.getImageData(0, 0, width, height)
+
+    context.putImageData(savedImage, 0, 0)
 
     context.globalCompositeOperation = "normal"
-    context.fillStyle = "#1b1a25"
+    context.fillStyle = data.circleColor
+    context.beginPath()
+    context.ellipse(width / 2, height * 0.45, width * 0.4, width * 0.4, Math.PI / 4, 0, 2 * Math.PI)
+    context.fill()
+
+    const bufferCanvas = document.createElement('canvas')
+    bufferCanvas.width = width
+    bufferCanvas.height = height
+    var context2 = bufferCanvas.getContext('2d')
+
+    context2.putImageData(
+      flippedImage,
+      width * 0.03, height * 0.12,
+      width * 0.03, height * 0.12,
+      width * 0.85, height * 0.06,
+    )
+    context2.putImageData(
+      flippedImage,
+      width * 0.03, height * 0.18,
+      width * 0.03, height * 0.18,
+      width * 0.85, height * 0.06,
+    )
+    context2.putImageData(
+      flippedImage,
+      width * 0.03, height * 0.24,
+      width * 0.03, height * 0.24,
+      width * 0.85, height * 0.06,
+    )
+
+    const rotation = 0.1
+    const xTranslation = 90
+
+    context.rotate(rotation)
+    context.translate(xTranslation, 0);
+    context.drawImage(bufferCanvas, 0, 0)
+    context.translate(-xTranslation, 0);
+    context.rotate(-rotation)
+
+    if (data.imageName) {
+      try {
+        const image = new Image()
+        const imgPromise = onload2promise(image)
+        image.src = `/images/${data.imageName}`
+        await imgPromise
+        // context.globalAlpha = 0.9
+        // context.drawImage(image,
+        //   0, 0,
+        //   // 500, 500,
+        //   image.naturalWidth, image.naturalWidth,
+        //   width * 0.05, height * 0.1,
+        //   width * 0.9, height * 0.9,
+        // )
+        // grayScale(context, image, width, height)
+        // console.log(image)
+        context.globalAlpha = 1
+        // context.putImageData(savedImage, 0, 0)
+        const duotoneImage = Filters.duotone(context, image, width, height, data.color1, data.color2, data.filter)
+        // context.putImageData(duotoneImage, 0, 0)
+        context.globalCompositeOperation = data.mode || "overlay"
+        // context.globalCompositeOperation = "destination-in"
+        context.drawImage(
+          duotoneImage,
+          0, 0,
+          // 500, 500,
+          // image.naturalWidth, image.naturalWidth,
+          // width * 0.05, height * 0.1,
+          // width * 0.9, height * 0.9,
+        )
+        // context.globalCompositeOperation = "normal"
+      } catch(e) {
+        console.log(e)
+      }
+    }
+
+    context.globalCompositeOperation = "normal"
+    context.fillStyle = data.textColor || "#1b1a25"
     // context.font = "900 390px Inter";
     // context.fillText("/newline", 120, (height / 2) + 8);
     // context.font = "200 262px Inter";
@@ -123,8 +213,13 @@ const sketch = () => {
     addColor(gui, data, "color4").name("color 4")
     addColor(gui, data, "color5").name("color 5")
     addColor(gui, data, "color6").name("color 6")
+    addColor(gui, data, "textColor").name("text color")
+    addColor(gui, data, "circleColor").name("circle color")
+    add(gui, data, "filter")
     add(gui, data, "guest")
     add(gui, data, "guestFontSize", 0, 1, 0.01)
+    add(gui, data, "imageName")
+    add(gui, data, "mode", modes)
     add(gui, data, "numColors", 0, 6, 1)
     add(gui, data, "darkness", 0, 100, 1)
     add(gui, data, "seed", _.range(0, 1000))
@@ -162,3 +257,126 @@ function getLocalStorage (key) {
 }
 
 
+
+function grayScale(context, width, height) {
+  var imgData = context.getImageData(0, 0, width, height);
+      var pixels  = imgData.data;
+      for (var i = 0, n = pixels.length; i < n; i += 4) {
+      var grayscale = pixels[i] * .3 + pixels[i+1] * .59 + pixels[i+2] * .11;
+      pixels[i  ] = grayscale;        // red
+      pixels[i+1] = grayscale;        // green
+      pixels[i+2] = grayscale;        // blue
+      //pixels[i+3]              is alpha
+  }
+  //redraw the image in black & white
+  context.putImageData(imgData, 0, 0);
+}
+
+function onload2promise(obj){
+  return new Promise((resolve, reject) => {
+      obj.onload = () => resolve(obj);
+      obj.onerror = reject;
+  });
+}
+
+let Filters = {}
+Filters.getPixels = function(ctx, image, width, height, filter) {
+  // var c = this.getCanvas(img.width, img.height);
+  // var ctx = c.getContext('2d');
+  const bufferCanvas = document.createElement('canvas')
+  bufferCanvas.width = width
+  bufferCanvas.height = height
+  var context2 = bufferCanvas.getContext('2d')
+  context2.filter = filter
+  context2.drawImage(
+    image,
+    0, 0,
+    // 500, 500,
+    image.naturalWidth, image.naturalWidth,
+    -width * 0.06, width * 0.05,
+    width * 1.05, width * 1.05,
+  )
+  return [
+    bufferCanvas,
+    context2,
+    context2.getImageData(0, 0, width, height),
+  ]
+};
+
+Filters.grayscale = function(pixels) {
+  var d = pixels.data;
+  var max = 0;
+  var min = 255;
+  for (var i=0; i < d.length; i+=4) {
+    // Fetch maximum and minimum pixel values
+    if (d[i] > max) { max = d[i]; }
+    if (d[i] < min) { min = d[i]; }
+    // Grayscale by averaging RGB values
+    var r = d[i];
+    var g = d[i+1];
+    var b = d[i+2];
+    var v = 0.3333*r + 0.3333*g + 0.3333*b;
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  for (var i=0; i < d.length; i+=4) {
+    // Normalize each pixel to scale 0-255
+    var v = (d[i] - min) * 255/(max-min);
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  return pixels;
+};
+
+const hexToRgb = hex => color(hex).rgb()
+
+Filters.gradientMap = function (tone1, tone2) {
+  var rgb1 = hexToRgb(tone1);
+  var rgb2 = hexToRgb(tone2);
+  var gradient = [];
+  for (var i = 0; i < (256*4); i += 4) {
+    gradient[i] = ((256-(i/4))*rgb1.r + (i/4)*rgb2.r)/256;
+    gradient[i+1] = ((256-(i/4))*rgb1.g + (i/4)*rgb2.g)/256;
+    gradient[i+2] = ((256-(i/4))*rgb1.b + (i/4)*rgb2.b)/256;
+    gradient[i+3] = 255;
+  }
+  return gradient;
+};
+
+Filters.duotone = function(ctx, img, width, height, tone1, tone2, filter) {
+  var [
+    bufferCanvas,
+    context2,
+    pixels,
+  ] = this.getPixels(ctx, img, width, height, filter);
+  pixels = Filters.grayscale(pixels);
+  var gradient = this.gradientMap(tone1, tone2);
+  // pixels = contrastImage(pixels, 60)
+  var d = pixels.data;
+  for (var i = 0; i < d.length; i += 4) {
+    if (d[i + 3]) {
+      d[i] = gradient[d[i]*4];
+      d[i+1] = gradient[d[i+1]*4 + 1];
+      d[i+2] = gradient[d[i+2]*4 + 2];
+    } else {
+      d[i] = 0
+      d[i + 1]  = 0
+      d[i + 2]  = 0
+      d[i + 3]  = 0
+    }
+  }
+
+  context2.putImageData(pixels,0,0)
+
+  return bufferCanvas;
+};
+
+function contrastImage(imgData, contrast){  //input range [-100..100]
+  var d = imgData.data;
+  contrast = (contrast/100) + 1;  //convert to decimal & shift range: [0..2]
+  var intercept = 128 * (1 - contrast);
+  for(var i=0;i<d.length;i+=4){   //r,g,b,a
+      d[i] = d[i]*contrast + intercept;
+      d[i+1] = d[i+1]*contrast + intercept;
+      d[i+2] = d[i+2]*contrast + intercept;
+  }
+  return imgData;
+}
