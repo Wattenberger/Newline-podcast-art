@@ -17,9 +17,12 @@ const data = {
   color6: getLocalStorage("color6") || "#454545",
   textColor: getLocalStorage("textColor") || "#fff",
   circleColor: getLocalStorage("circleColor") || "#fff",
+  guestColor1: getLocalStorage("guestColor1") || "#1f3759",
+  guestColor2: getLocalStorage("guestColor2") || "#f7dff6",
   guest: getLocalStorage("guest") || "",
   filter: getLocalStorage("filter") || "",
   mode: getLocalStorage("mode") || modes[0],
+  circleMode: getLocalStorage("circleMode") || modes[0],
   guestFontSize: getLocalStorage("guestFontSize") || 0.56,
   imageName: getLocalStorage("imageName") || "",
   numColors: +getLocalStorage("numColors") || 4,
@@ -87,11 +90,13 @@ const sketch = () => {
 
     context.putImageData(savedImage, 0, 0)
 
-    context.globalCompositeOperation = "normal"
+    context.globalCompositeOperation = data.circleMode || "overlay"
     context.fillStyle = data.circleColor
     context.beginPath()
     context.ellipse(width / 2, height * 0.45, width * 0.4, width * 0.4, Math.PI / 4, 0, 2 * Math.PI)
     context.fill()
+
+    context.globalCompositeOperation = "normal"
 
     const bufferCanvas = document.createElement('canvas')
     bufferCanvas.width = width
@@ -126,6 +131,10 @@ const sketch = () => {
     context.translate(-xTranslation, 0);
     context.rotate(-rotation)
 
+    context.globalAlpha = 1
+    context.translate(width, 0)
+    context.scale(-1, 1)
+
     if (data.imageName) {
       try {
         const image = new Image()
@@ -142,9 +151,8 @@ const sketch = () => {
         // )
         // grayScale(context, image, width, height)
         // console.log(image)
-        context.globalAlpha = 1
         // context.putImageData(savedImage, 0, 0)
-        const duotoneImage = Filters.duotone(context, image, width, height, data.color1, data.color2, data.filter)
+        const duotoneImage = Filters.duotone(context, image, width, height, data.guestColor1, data.guestColor2, data.filter)
         // context.putImageData(duotoneImage, 0, 0)
         context.globalCompositeOperation = data.mode || "overlay"
         // context.globalCompositeOperation = "destination-in"
@@ -215,11 +223,14 @@ const sketch = () => {
     addColor(gui, data, "color6").name("color 6")
     addColor(gui, data, "textColor").name("text color")
     addColor(gui, data, "circleColor").name("circle color")
+    addColor(gui, data, "guestColor1").name("guest color 1")
+    addColor(gui, data, "guestColor2").name("guest color 2")
     add(gui, data, "filter")
     add(gui, data, "guest")
     add(gui, data, "guestFontSize", 0, 1, 0.01)
     add(gui, data, "imageName")
     add(gui, data, "mode", modes)
+    add(gui, data, "circleMode", modes)
     add(gui, data, "numColors", 0, 6, 1)
     add(gui, data, "darkness", 0, 100, 1)
     add(gui, data, "seed", _.range(0, 1000))
