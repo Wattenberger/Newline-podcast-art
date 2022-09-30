@@ -10,7 +10,7 @@
   "dependencies": {
     "canvas-sketch": "^0.7.3",
     "canvas-sketch-util": "^1.10.0",
-    "d3-color": "^1.4.0",
+    "d3-color": "^3.1.0",
     "dat.gui": "^0.7.6",
     "lodash": "^4.17.15"
   }
